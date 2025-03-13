@@ -297,10 +297,15 @@ class HTMLGenerator:
         """
         
         for entry in entries:
+            # Handle both string and datetime objects for published date
+            date_str = entry.published
+            if hasattr(entry.published, 'strftime'):
+                date_str = entry.published.strftime('%B %d, %Y %I:%M %p')
+            
             html += f"""
                 <div class="entry">
                     <h2><a href="{entry.link}" target="_blank">{entry.title}</a></h2>
-                    <div class="date">{entry.published.strftime('%B %d, %Y %I:%M %p')}</div>
+                    <div class="date">{date_str}</div>
                     <div class="content">{entry.content}</div>
                     <a href="{entry.link}" class="read-more" target="_blank">Read more →</a>
                 </div>
