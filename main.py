@@ -85,31 +85,42 @@ def main():
         ))
     
     # Add Weather parser if API key is available
+    weather_parser = None
     if weather_api_key:
-        parsers.append(WeatherParser(weather_api_key))
+        weather_parser = WeatherParser(weather_api_key)
+        parsers.append(weather_parser)
     
     # Collect all entries
     all_entries: List[FeedEntry] = []
+    weather_entries: List[FeedEntry] = []
+    
     for parser in parsers:
         try:
             entries = parser.parse()
             print(f"Parsed {len(entries)} entries from {parser.name}")
-            all_entries.extend(entries)
+            
+            # Separate weather entries from news entries
+            if parser == weather_parser:
+                weather_entries.extend(entries)
+            else:
+                all_entries.extend(entries)
+                
         except Exception as e:
             print(f"Error parsing {parser.name}: {str(e)}")
     
     # Sort entries by date (newest first)
     all_entries.sort(key=lambda x: x.published, reverse=True)
+    weather_entries.sort(key=lambda x: x.published, reverse=True)
     
     # Generate HTML
     generator = HTMLGenerator(output_dir=output_dir)
     output_file = generator.save_html(
         entries=all_entries,
         title="Daily News Dashboard",
-        filename="index.html"  # Optional: use a specific filename
+        weather_entries=weather_entries
     )
     
-    print(f"\nHTML file generated: {output_file}")
+    print(f"\nHTML files generated in: {output_dir}")
 
 if __name__ == "__main__":
     main()

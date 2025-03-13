@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 from feed_parser import FeedEntry
+import os
 
 class HTMLGenerator:
     """
@@ -24,15 +25,16 @@ class HTMLGenerator:
         css (str): CSS styles for the HTML output
     """
     
-    def __init__(self, output_dir: Optional[str] = None):
+    def __init__(self, output_dir=None):
         """
         Initialize the HTML generator.
         
         Args:
-            output_dir (Optional[str]): Directory where the HTML file will be saved.
-                                      If None, defaults to user's Desktop.
+            output_dir (str, optional): Directory to save HTML files.
+                                      If None, defaults to Desktop.
         """
-        self.output_dir = output_dir
+        self.output_dir = output_dir or os.path.expanduser("~/Desktop")
+        os.makedirs(self.output_dir, exist_ok=True)
         # Define category order (categories not in this list will be displayed after these)
         self.category_order = ["Weather", "US News"]
         
@@ -203,44 +205,271 @@ class HTMLGenerator:
         </html>
         """
     
-    def save_html(self, entries: List[FeedEntry], title: str, filename: Optional[str] = None) -> str:
+    def _generate_feed_html(self, entries: List[FeedEntry], title: str, source_name: str) -> str:
+        """Generate HTML for a specific feed source."""
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{title} - {source_name}</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }}
+                h1 {{
+                    color: #333;
+                    border-bottom: 2px solid #eee;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }}
+                .entry {{
+                    margin-bottom: 20px;
+                    padding-bottom: 20px;
+                    border-bottom: 1px solid #eee;
+                }}
+                .entry:last-child {{
+                    border-bottom: none;
+                }}
+                .entry h2 {{
+                    margin: 0 0 10px 0;
+                    color: #2c3e50;
+                }}
+                .entry h2 a {{
+                    color: #2c3e50;
+                    text-decoration: none;
+                }}
+                .entry h2 a:hover {{
+                    color: #3498db;
+                }}
+                .entry .date {{
+                    color: #7f8c8d;
+                    font-size: 0.9em;
+                    margin-bottom: 10px;
+                }}
+                .entry .content {{
+                    color: #444;
+                }}
+                .entry .content img {{
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 4px;
+                    margin: 10px 0;
+                }}
+                .read-more {{
+                    display: inline-block;
+                    margin-top: 10px;
+                    color: #3498db;
+                    text-decoration: none;
+                    font-weight: 500;
+                }}
+                .read-more:hover {{
+                    text-decoration: underline;
+                }}
+                .back-link {{
+                    display: inline-block;
+                    margin-bottom: 20px;
+                    color: #3498db;
+                    text-decoration: none;
+                }}
+                .back-link:hover {{
+                    text-decoration: underline;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <a href="index.html" class="back-link">← Back to Dashboard</a>
+                <h1>{title} - {source_name}</h1>
         """
-        Generate and save HTML file to the configured output directory.
+        
+        for entry in entries:
+            html += f"""
+                <div class="entry">
+                    <h2><a href="{entry.link}" target="_blank">{entry.title}</a></h2>
+                    <div class="date">{entry.published.strftime('%B %d, %Y %I:%M %p')}</div>
+                    <div class="content">{entry.content}</div>
+                    <a href="{entry.link}" class="read-more" target="_blank">Read more →</a>
+                </div>
+            """
+        
+        html += """
+            </div>
+        </body>
+        </html>
+        """
+        return html
+    
+    def _generate_index_html(self, weather_entries: List[FeedEntry], feed_links: List[tuple]) -> str:
+        """Generate the main index.html file with weather and feed links."""
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>News Dashboard</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }}
+                h1 {{
+                    color: #333;
+                    border-bottom: 2px solid #eee;
+                    padding-bottom: 10px;
+                    margin-bottom: 20px;
+                }}
+                .weather-section {{
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                }}
+                .weather-section h2 {{
+                    color: #2c3e50;
+                    margin-top: 0;
+                }}
+                .feed-links {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 20px;
+                    margin-top: 30px;
+                }}
+                .feed-link {{
+                    padding: 15px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    color: #2c3e50;
+                    transition: all 0.3s ease;
+                }}
+                .feed-link:hover {{
+                    background: #e9ecef;
+                    transform: translateY(-2px);
+                }}
+                .feed-link h3 {{
+                    margin: 0 0 10px 0;
+                    color: #2c3e50;
+                }}
+                .feed-link p {{
+                    margin: 0;
+                    color: #6c757d;
+                    font-size: 0.9em;
+                }}
+                .timestamp {{
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 0.9em;
+                    margin-top: 30px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>News Dashboard</h1>
+        """
+        
+        # Add weather section if entries exist
+        if weather_entries:
+            html += """
+                <div class="weather-section">
+                    <h2>Weather</h2>
+            """
+            for entry in weather_entries:
+                html += f"""
+                    <div class="entry">
+                        <h3>{entry.title}</h3>
+                        <div class="content">{entry.content}</div>
+                    </div>
+                """
+            html += "</div>"
+        
+        # Add feed links section
+        html += """
+                <h2>News Sources</h2>
+                <div class="feed-links">
+        """
+        for name, filename in feed_links:
+            html += f"""
+                    <a href="{filename}" class="feed-link">
+                        <h3>{name}</h3>
+                        <p>View latest news from {name}</p>
+                    </a>
+            """
+        html += "</div>"
+        
+        # Add timestamp
+        html += f"""
+                <div class="timestamp">
+                    Last updated: {datetime.now().strftime('%B %d, %Y %I:%M %p')}
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return html
+    
+    def save_html(self, entries: List[FeedEntry], title: str, weather_entries: List[FeedEntry] = None) -> str:
+        """
+        Save HTML files for each feed source and an index page.
         
         Args:
-            entries (List[FeedEntry]): List of feed entries to include
-            title (str): Title of the HTML page
-            filename (Optional[str]): Custom filename. If None, uses 'News_YYYY-MM-DD.html'
-        
-        Returns:
-            str: Full path to the generated file
-        
-        Example:
-            >>> generator = HTMLGenerator("/var/www/html")
-            >>> path = generator.save_html(entries, "News Dashboard", "index.html")
-            >>> print(path)
-            '/var/www/html/index.html'
-        """
-        # Determine output directory
-        if self.output_dir:
-            output_path = Path(self.output_dir)
-        else:
-            output_path = Path.home() / "Desktop"
-        
-        # Ensure output directory exists
-        output_path.mkdir(parents=True, exist_ok=True)
-        
-        # Generate filename if not provided
-        if not filename:
-            today = datetime.now().strftime("%Y-%m-%d")
-            filename = f"News_{today}.html"
-        
-        # Create full output path
-        output_file = str(output_path / filename)
-        
-        # Generate and save HTML
-        html_content = self.generate_html(entries, title)
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+            entries (List[FeedEntry]): List of feed entries
+            title (str): Title for the dashboard
+            weather_entries (List[FeedEntry], optional): Weather entries for the index page
             
-        return output_file 
+        Returns:
+            str: Path to the index.html file
+        """
+        # Group entries by source
+        entries_by_source = {}
+        for entry in entries:
+            if entry.source not in entries_by_source:
+                entries_by_source[entry.source] = []
+            entries_by_source[entry.source].append(entry)
+        
+        # Generate HTML files for each source
+        feed_links = []
+        for source, source_entries in entries_by_source.items():
+            # Create a filename from the source name
+            filename = f"{source.lower().replace(' ', '_')}.html"
+            feed_links.append((source, filename))
+            
+            # Generate and save the HTML file
+            html_content = self._generate_feed_html(source_entries, title, source)
+            file_path = os.path.join(self.output_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+        
+        # Generate and save the index.html file
+        index_html = self._generate_index_html(weather_entries or [], feed_links)
+        index_path = os.path.join(self.output_dir, 'index.html')
+        with open(index_path, 'w', encoding='utf-8') as f:
+            f.write(index_html)
+        
+        return index_path 

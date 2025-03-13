@@ -1,130 +1,137 @@
 # News Dashboard Generator
 
-A Python application that aggregates news from various sources (RSS feeds and NewsAPI), weather information, and generates a beautiful HTML dashboard.
+A Python-based news dashboard that aggregates content from various sources (RSS feeds, NewsAPI) and weather information into a clean, modern web interface.
 
 ## Features
 
-- Aggregates news from multiple sources:
-  - RSS feeds (Autosport F1, EDM News, WRC)
+- **Multiple News Sources**: Aggregates content from:
+  - RSS feeds (Autosport F1, EDM News, WRC News)
   - NewsAPI (US News)
-  - OpenWeather API (Weather forecast)
-- Generates a clean, responsive HTML dashboard
-- Customizable news sources
-- Configurable output directory (perfect for web servers)
-- Automatic content cleaning and formatting
-- Error handling and fallbacks for missing data
-- Category-based organization with customizable ordering
+  - OpenWeather API (Weather information)
+- **Clean, Modern Interface**: Responsive design with a clean, modern layout
+- **Separate Pages**: Each news source has its own dedicated page
+- **Weather Dashboard**: Main page includes weather information and links to all news sources
+- **Easy Navigation**: Back-to-dashboard links on all pages
+- **Automatic Updates**: Can be scheduled to run daily via cron job
 
-## Requirements
+## Prerequisites
 
-- Python 3.8+
-- NewsAPI key (for US News)
-- OpenWeather API key (for weather forecast)
+- Python 3.8 or higher
+- API keys for:
+  - NewsAPI (https://newsapi.org)
+  - OpenWeather API (https://openweathermap.org/api)
 
 ## Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/news-dashboard.git
-cd news-dashboard
-```
+   ```bash
+   git clone <repository-url>
+   cd news-dashboard
+   ```
 
 2. Create and activate a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
 3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. Create a `.env` file in the project root with your configuration:
-```
-NEWS_API=your_newsapi_key_here
-WEATHER_API=your_openweather_api_key_here
-OUTPUT_DIR=/path/to/output/directory  # Optional: defaults to Desktop
-```
+4. Create a `.env` file in the project root with your API keys:
+   ```
+   NEWS_API=your_newsapi_key_here
+   WEATHER_API=your_openweather_key_here
+   OUTPUT_DIR=/path/to/output/directory  # Optional, defaults to Desktop
+   ```
 
 ## Usage
 
-### Basic Usage
+1. Run the script:
+   ```bash
+   python main.py
+   ```
 
-Run the script:
-```bash
-python main.py
-```
+2. The script will generate:
+   - `index.html`: Main dashboard with weather and links to all news sources
+   - `autosport_f1.html`: F1 news from Autosport
+   - `edm_news.html`: EDM news
+   - `wrc_news.html`: WRC news
+   - `us_news.html`: US news from NewsAPI
 
-The script will:
-1. Fetch news from all configured sources
-2. Get the current weather and forecast
-3. Generate an HTML file named `News_YYYY-MM-DD.html`
+## Setting Up Daily Updates (Ubuntu)
 
-### Custom Output Directory
+1. Create a shell script `update_news.sh`:
+   ```bash
+   #!/bin/bash
+   cd "$(dirname "$0")"
+   OUTPUT_DIR="/var/www/nodorks.net"  # Update this path
+   YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
+   
+   # Rename existing news.html if it exists
+   if [ -f "$OUTPUT_DIR/news.html" ]; then
+       mv "$OUTPUT_DIR/news.html" "$OUTPUT_DIR/news_$YESTERDAY.html"
+   fi
+   
+   # Activate virtual environment and run the script
+   source venv/bin/activate
+   python main.py
+   deactivate
+   ```
 
-You can specify where the HTML file should be generated in two ways:
+2. Make the script executable:
+   ```bash
+   chmod +x update_news.sh
+   ```
 
-1. Environment variable in `.env`:
-```
-OUTPUT_DIR=/var/www/html  # Example for Apache web server
-```
+3. Set up the cron job:
+   ```bash
+   crontab -e
+   ```
+   Add the following line to run at 4 AM daily:
+   ```
+   0 4 * * * /full/path/to/update_news.sh >> /var/log/news_update.log 2>&1
+   ```
 
-2. Programmatically when creating the HTMLGenerator:
-```python
-generator = HTMLGenerator(output_dir="/var/www/html")
-generator.save_html(
-    entries=entries,
-    title="Daily News Dashboard",
-    filename="index.html"  # Optional: custom filename
-)
-```
-
-### Web Server Integration
-
-To use with a web server:
-
-1. Set the output directory to your web server's document root:
-```
-OUTPUT_DIR=/var/www/html  # Apache example
-OUTPUT_DIR=/usr/share/nginx/html  # Nginx example
-```
-
-2. Optionally set a fixed filename like `index.html`:
-```python
-generator.save_html(entries=entries, title="News Dashboard", filename="index.html")
-```
-
-3. Set up a cron job to update the news regularly:
-```bash
-0 * * * * cd /path/to/news-dashboard && .venv/bin/python main.py  # Updates every hour
-```
-
-## Adding News Sources
-
-To add new news sources, modify the `news_sources` list in `main.py`:
-
-```python
-news_sources = [
-    # RSS feeds (no API key needed)
-    ("https://example.com/feed.rss", "Example News"),
-    # NewsAPI endpoints (requires API key)
-    ("https://newsapi.org/v2/everything?q=tech", "Tech News"),
-]
-```
+4. Create and set permissions for the log file:
+   ```bash
+   sudo touch /var/log/news_update.log
+   sudo chown your_username:your_username /var/log/news_update.log
+   ```
 
 ## Project Structure
 
-- `main.py`: Entry point and configuration
-- `feed_parser.py`: Base classes for parsers
-- `unified_parser.py`: Combined RSS and NewsAPI parser
-- `weather_parser.py`: OpenWeather API parser
-- `html_generator.py`: HTML dashboard generator
+```
+news-dashboard/
+├── main.py              # Main script
+├── feed_parser.py       # Feed entry data structure
+├── unified_parser.py    # Unified parser for different feed types
+├── weather_parser.py    # Weather API parser
+├── html_generator.py    # HTML generation
+├── requirements.txt     # Python dependencies
+├── .env                # Environment variables (create this)
+└── README.md           # This file
+```
 
-## Contributing
+## Customization
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Adding New News Sources
+
+To add a new RSS feed, update the `news_sources` list in `main.py`:
+
+```python
+news_sources = [
+    ("https://example.com/feed", "Source Name"),
+    # Add your new source here
+]
+```
+
+### Modifying the Layout
+
+The HTML templates and styles are defined in `html_generator.py`. You can modify the CSS and HTML structure to customize the appearance.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details. 
